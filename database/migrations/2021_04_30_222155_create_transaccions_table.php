@@ -13,7 +13,7 @@ class CreateTransaccionsTable extends Migration
      */
     public function up()
     {
-        Schema::create('transaccions', function (Blueprint $table) {
+        Schema::create('transacciones', function (Blueprint $table) {
             $table->id();
             $table->enum('tipo', ['recarga', 'pago'])->default('pago');
             $table->decimal('valor', 19, 2)->default(0.00);

@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\AuthController;
+
 return [
     
     // Service configurations.
@@ -23,14 +25,13 @@ return [
             'options'           => []
         ],
         'user'              => [
-            'name'              => 'Demo',
-            'class'             => 'Viewflex\Zoap\Demo\DemoService',
+            'name'              => 'User',
+            'class'             => AuthController::class,
             'exceptions'        => [
                 'Exception'
             ],
             'types'             => [
                 'keyValue'          => 'Viewflex\Zoap\Demo\Types\KeyValue',
-                'product'           => 'Viewflex\Zoap\Demo\Types\Product'
             ],
             'strategy'          => 'ArrayOfTypeComplex',
             'headers'           => [
