@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\TransaccionController;
 
 return [
     
@@ -27,6 +28,21 @@ return [
         'user'              => [
             'name'              => 'User',
             'class'             => AuthController::class,
+            'exceptions'        => [
+                'Exception'
+            ],
+            'types'             => [
+                'keyValue'          => 'Viewflex\Zoap\Demo\Types\KeyValue',
+            ],
+            'strategy'          => 'ArrayOfTypeComplex',
+            'headers'           => [
+                'Cache-Control'     => 'no-cache, no-store'
+            ],
+            'options'           => []
+        ],
+        'transaccion'              => [
+            'name'              => 'Transaccion',
+            'class'             => TransaccionController::class,
             'exceptions'        => [
                 'Exception'
             ],
