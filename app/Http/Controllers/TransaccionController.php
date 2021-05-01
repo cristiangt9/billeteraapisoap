@@ -242,8 +242,7 @@ class TransaccionController
             }
 
             DB::beginTransaction();
-            $transaccion->estado = 'ejecutado';
-            $transaccion->save();
+            
 
             //debitar pago al usuario que paga 
             $user_payer->saldo -= abs($transaccion->valor);
@@ -252,8 +251,11 @@ class TransaccionController
             //cargar pago al usuario destino
             $user_receptor->saldo += abs($transaccion->valor);
             $user_receptor->save();
+            
+            $transaccion->estado = 'ejecutado';
+            $transaccion->save();
             DB::commit();
-            return $this->defaultResponse('true', 'Solicitud de Pago Realizada', 'La solicitud de pago ha sido registrada satisfactoriamente', [], ['saldo' => $user_payer->saldo], 201);
+            return $this->defaultResponse('true', 'Solicitud de Pago Realizada', 'La solicitud de pago ha sido registrada satisfactoriamente', [], ['saldo' => $user_payer->saldo], 200);
         } catch (\Throwable $th) {
 
             DB::rollback();
