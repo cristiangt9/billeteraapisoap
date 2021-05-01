@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\ConfirmacionMailable;
 use App\Models\Transaccion;
 use App\Models\User;
 use App\Traits\CustomResponseTrait;
 use App\Traits\ValidatorTrait;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\PersonalAccessToken;
 
 /**
@@ -181,7 +183,7 @@ class TransaccionController
             $transaccion->save();
 
             //enviar correo aqui
-
+            Mail::to($user_payer->email)->send(new ConfirmacionMailable($transaccion->token_confirmacion));
             DB::commit();
             return $this->defaultResponse('true', 'Solicitud de Pago Realizada', 'Por favor revise su correo, hemos enviado un token de validación a su correo', [], ['codigo' => $transaccion->token_confirmacion], 201);
         } catch (\Throwable $th) {
@@ -200,9 +202,6 @@ class TransaccionController
      */
     public function confirmacionPago($token, $tokenConfirmacion)
     {
-        // $tokenRegister = PersonalAccessToken::findToken($token);
-        // $user = User::find($tokenRegister->tokenable_id);
-        // dd($tokenRegister);
         $rules = [
             "token" => "required",
             "tokenConfirmacion" => "required"
@@ -241,8 +240,6 @@ class TransaccionController
             if (is_null($user_payer)) {
                 return $this->defaultResponseWithoutData('false', 'Usuario Cancelado', 'Las credenciales proporcionadas son invalidas o vencidas', [], 401);
             }
-
-
 
             DB::beginTransaction();
             $transaccion->estado = 'ejecutado';
