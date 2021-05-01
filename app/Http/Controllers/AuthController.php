@@ -51,7 +51,7 @@ class AuthController
             $user->email = $email;
             $user->celular = $celular;
             $user->save();
-            
+
             $token = $user->createToken('auth_token')->plainTextToken;
 
             return $this->defaultResponse('true', 'Usuario Registrado', 'El usuario ha sido registrado satisfactoriamente', [], ['token' => $token], 201);
@@ -86,7 +86,7 @@ class AuthController
             if (is_null($user)) {
                 return $this->defaultResponseWithoutData('false', 'Credenciales Invalidas', 'Las credenciales proporcionadas son invalidas', [], 200);
             }
-
+            // aqui deberia cancelar los token anteriores para crear uno nuevo... por implementar...
             $token = $user->createToken('auth_token')->plainTextToken;
             return $this->defaultResponse('true', 'Usuario Autenticado', 'Bienvenido a la billera digital ePayco', [], ['token' => $token], 200);
         } catch (\Throwable $th) {

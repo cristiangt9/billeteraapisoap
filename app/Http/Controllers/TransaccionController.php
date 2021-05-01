@@ -48,7 +48,7 @@ class TransaccionController
         $user = User::where('documento', $documento)->where('celular', $celular)->first();
 
         if (is_null($user)) {
-            return $this->defaultResponseWithoutData('false', 'Credenciales Invalidas', 'Las credenciales proporcionadas son invalidas', $validator->errors, 200);
+            return $this->defaultResponseWithoutData('false', 'Credenciales Invalidas', 'Las credenciales proporcionadas son invalidas', [], 200);
         }
         try {
             DB::beginTransaction();
@@ -98,7 +98,7 @@ class TransaccionController
         $user = User::where('documento', $documento)->where('celular', $celular)->first();
 
         if (is_null($user)) {
-            return $this->defaultResponseWithoutData('false', 'Credenciales Invalidas', 'Las credenciales proporcionadas son invalidas', $validator->errors, 200);
+            return $this->defaultResponseWithoutData('false', 'Credenciales Invalidas', 'Las credenciales proporcionadas son invalidas', [], 200);
         }
 
         try {
@@ -146,7 +146,7 @@ class TransaccionController
         $tokenRegister = PersonalAccessToken::findToken($token);
 
         if (is_null($tokenRegister)) {
-            return $this->defaultResponseWithoutData('false', 'Credenciales Invalidas o vencidas', 'Las credenciales proporcionadas son invalidas o vencidas', $validator->errors, 401);
+            return $this->defaultResponseWithoutData('false', 'Credenciales Invalidas o vencidas', 'Las credenciales proporcionadas son invalidas o vencidas', [], 401);
         }
 
         $user_payer = User::find($tokenRegister->tokenable_id);
@@ -154,22 +154,22 @@ class TransaccionController
             return $this->defaultResponseWithoutData('false', 'Usuario Cancelado', 'Las credenciales proporcionadas son invalidas o vencidas', [], 401);
         }
 
-        if($user_payer->saldo < $valor) {
+        if ($user_payer->saldo < $valor) {
             return $this->defaultResponseWithoutData('false', 'Saldo insuficiente', 'El saldo es menor a la cantidad a pagar', [], 401);
         }
 
         $user_receptor = User::where('documento', $documento)->where('celular', $celular)->first();
         if (is_null($user_receptor)) {
-            return $this->defaultResponseWithoutData('false', 'Usuario Receptor no encontrado', 'Las credenciales proporcionadas prodian ser invalidas o vencidas', $validator->errors, 401);
+            return $this->defaultResponseWithoutData('false', 'Usuario Receptor no encontrado', 'Las credenciales proporcionadas prodian ser invalidas o vencidas', [], 401);
         }
 
         try {
             DB::beginTransaction();
             // cancelar las transacciones procesando
             Transaccion::where("estado", "procesando")
-            ->where("user_executer_id", $user_payer->id)
-            ->update(["estado" => "fallido"]);
-            
+                ->where("user_executer_id", $user_payer->id)
+                ->update(["estado" => "fallido"]);
+
             $transaccion = new Transaccion();
             $transaccion->tipo = 'pago';
             $transaccion->valor = abs($valor);
@@ -179,13 +179,88 @@ class TransaccionController
             $transaccion->token_usuario =  $token;
             $transaccion->token_confirmacion = $this->generateRandomString(6);
             $transaccion->save();
-            
+
             //enviar correo aqui
-            
+
             DB::commit();
             return $this->defaultResponse('true', 'Solicitud de Pago Realizada', 'Por favor revise su correo, hemos enviado un token de validación a su correo', [], ['codigo' => $transaccion->token_confirmacion], 201);
         } catch (\Throwable $th) {
             DB::rollback();
+            return $this->defaultResponse('false', 'Algo ha fallado', 'Algo ha fallado durante la generación del usuario, por favor contacte a servicio al cliente', [], ['error' => $th], 422);
+        }
+    }
+
+    /**
+     * confirmacionPago: token de sesión y token de confirmación, retorna status: true y confirmación del valor transeferido, ó devuelve un error.
+     *
+     * @param string $token
+     * @param string $tokenConfirmacion
+     * @return array
+     * @throws SoapFault
+     */
+    public function confirmacionPago($token, $tokenConfirmacion)
+    {
+        // $tokenRegister = PersonalAccessToken::findToken($token);
+        // $user = User::find($tokenRegister->tokenable_id);
+        // dd($tokenRegister);
+        $rules = [
+            "token" => "required",
+            "tokenConfirmacion" => "required"
+        ];
+
+        $inputs = [
+            "token" => $token,
+            "tokenConfirmacion" => $tokenConfirmacion
+        ];
+
+        $validator = $this->validatorInput($inputs, $rules);
+
+        if (!$validator->validated) {
+            return $this->defaultResponseWithoutData('false', 'Datos faltantes', 'Uno o mas datos son invalidos', $validator->errors, 422);
+        }
+
+        $tokenRegister = PersonalAccessToken::findToken($token);
+        if (is_null($tokenRegister)) {
+            return $this->defaultResponseWithoutData('false', 'Credenciales Invalidas o vencidas', 'Las credenciales proporcionadas son invalidas o vencidas', [], 401);
+        }
+        try {
+            $transaccion = Transaccion::where("estado", "procesando")
+                ->where("token_confirmacion", $tokenConfirmacion)
+                ->where("token_usuario", $token)
+                ->first();
+            if (is_null($transaccion)) {
+                return $this->defaultResponseWithoutData('false', 'Transacción Cancelada', 'La transaccion ha sido cancelada', [], 200);
+            }
+
+            $user_receptor = User::find($transaccion->user_receptor_id);
+            if (is_null($user_receptor)) {
+                return $this->defaultResponseWithoutData('false', 'Usuario Destino esta cancelado', 'El usuario destino no fue encontrado', [], 200);
+            }
+
+            $user_payer = User::find($tokenRegister->tokenable_id);
+            if (is_null($user_payer)) {
+                return $this->defaultResponseWithoutData('false', 'Usuario Cancelado', 'Las credenciales proporcionadas son invalidas o vencidas', [], 401);
+            }
+
+
+
+            DB::beginTransaction();
+            $transaccion->estado = 'ejecutado';
+            $transaccion->save();
+
+            //debitar pago al usuario que paga 
+            $user_payer->saldo -= abs($transaccion->valor);
+            $user_payer->save();
+
+            //cargar pago al usuario destino
+            $user_receptor->saldo += abs($transaccion->valor);
+            $user_receptor->save();
+            DB::commit();
+            return $this->defaultResponse('true', 'Solicitud de Pago Realizada', 'La solicitud de pago ha sido registrada satisfactoriamente', [], ['saldo' => $user_payer->saldo], 201);
+        } catch (\Throwable $th) {
+
+            DB::rollback();
+
             return $this->defaultResponse('false', 'Algo ha fallado', 'Algo ha fallado durante la generación del usuario, por favor contacte a servicio al cliente', [], ['error' => $th], 422);
         }
     }
