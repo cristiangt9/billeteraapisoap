@@ -67,4 +67,50 @@ class TransaccionController
             return $this->defaultResponse('false', 'Algo ha fallado', 'Algo ha fallado durante la generación del usuario, por favor contacte a servicio al cliente', [], ['error' => $th], 422);
         }
     }
+
+    /**
+     * consultarSaldo: requiere de documento y celular, retorna status: true y saldo, ó devuelve un error.
+     *
+     * @param string $documento
+     * @param string $celular
+     * @return array
+     * @throws SoapFault
+     */
+    public function consultarSaldo($documento, $celular)
+    {
+        $rules = [
+            "documento" => "required",
+            "celular" => "required",
+        ];
+
+
+        $inputs = [
+            "documento" => $documento,
+            "celular" => $celular,
+        ];
+        $validator = $this->validatorInput($inputs, $rules);
+
+        if (!$validator->validated) {
+            return $this->defaultResponseWithoutData('false', 'Datos faltantes', 'Uno o mas datos son invalidos', $validator->errors, 422);
+        }
+
+        $user = User::where('documento', $documento)->where('celular', $celular)->first();
+
+        if (is_null($user)) {
+            return $this->defaultResponseWithoutData('false', 'Credenciales Invalidas', 'Las credenciales proporcionadas son invalidas', $validator->errors, 200);
+        }
+
+        try {
+            $transaccion = new Transaccion();
+            $transaccion->tipo = 'recarga';
+            $transaccion->estado = 'ejecutado';
+            $transaccion->user_executer_id = $user->id;
+            $transaccion->save();
+
+            return $this->defaultResponse('true', 'Consulta Realizada', 'La consulta ha sido registrada satisfactoriamente', [], ['saldo' => $user->saldo], 200);
+        } catch (\Throwable $th) {
+
+            return $this->defaultResponse('false', 'Algo ha fallado', 'Algo ha fallado durante la generación del usuario, por favor contacte a servicio al cliente', [], ['error' => $th], 422);
+        }
+    }
 }
