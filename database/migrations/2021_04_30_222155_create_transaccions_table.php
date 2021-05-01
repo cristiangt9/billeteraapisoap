@@ -33,6 +33,6 @@ class CreateTransaccionsTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('transaccions');
+        Schema::dropIfExists('transacciones');
     }
 }
