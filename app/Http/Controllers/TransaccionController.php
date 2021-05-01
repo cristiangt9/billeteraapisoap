@@ -105,7 +105,7 @@ class TransaccionController
 
         try {
             $transaccion = new Transaccion();
-            $transaccion->tipo = 'recarga';
+            $transaccion->tipo = 'consulta';
             $transaccion->estado = 'ejecutado';
             $transaccion->user_executer_id = $user->id;
             $transaccion->save();

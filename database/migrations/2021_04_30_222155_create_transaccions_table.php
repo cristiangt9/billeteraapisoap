@@ -15,7 +15,7 @@ class CreateTransaccionsTable extends Migration
     {
         Schema::create('transacciones', function (Blueprint $table) {
             $table->id();
-            $table->enum('tipo', ['recarga', 'pago'])->default('pago');
+            $table->enum('tipo', ['recarga', 'consulta', 'pago'])->default('pago');
             $table->decimal('valor', 19, 2)->default(0.00);
             $table->enum('estado', ['fallido', 'procesando','ejecutado'])->default('procesando');
             $table->text('token_confirmacion')->nullable()->default(null);
