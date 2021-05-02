@@ -110,7 +110,7 @@ class TransaccionController
             $transaccion->user_executer_id = $user->id;
             $transaccion->save();
 
-            return $this->defaultResponse('true', 'Consulta Realizada', 'La consulta ha sido registrada satisfactoriamente', [], ['saldo' => $user->saldo], 201);
+            return $this->defaultResponse('true', 'Consulta Realizada', 'La consulta ha sido registrada satisfactoriamente', [], ['saldo' => $user->saldo, 'nombres' => $user->nombres], 201);
         } catch (\Throwable $th) {
 
             return $this->defaultResponse('false', 'Algo ha fallado', 'Algo ha fallado durante la generación del usuario, por favor contacte a servicio al cliente', [], ['error' => $th], 422);
